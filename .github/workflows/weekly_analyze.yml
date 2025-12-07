@@ -55,14 +55,7 @@ jobs:
         run: |
           python weekly_runner.py --batch-size 10
           # 完了状況をチェック
-          python -c "
-          import json
-          with open('output/analysis_results.json', 'r') as f:
-              results = json.load(f)
-          successful = [r for r in results if not r.get('error')]
-          print(f'ANALYZED_COUNT={len(successful)}')
-          print(f'IS_COMPLETE={'true' if len(successful) >= 500 else 'false'}')
-          " >> $GITHUB_OUTPUT
+          python check_progress.py >> $GITHUB_OUTPUT
 
       - name: Generate index page
         run: |
