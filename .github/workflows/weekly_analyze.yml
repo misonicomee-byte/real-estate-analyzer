@@ -44,11 +44,21 @@ jobs:
             analysis-cache-
 
       - name: Run analysis (10 companies)
+        id: analysis
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
         run: |
           python weekly_runner.py --batch-size 10
+          # 完了状況をチェック
+          python -c "
+          import json
+          with open('output/analysis_results.json', 'r') as f:
+              results = json.load(f)
+          successful = [r for r in results if not r.get('error')]
+          print(f'ANALYZED_COUNT={len(successful)}')
+          print(f'IS_COMPLETE={'true' if len(successful) >= 500 else 'false'}')
+          " >> $GITHUB_OUTPUT
 
       - name: Generate index page
         run: |
@@ -68,3 +78,73 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./output
           keep_files: true
+
+      - name: Notify Chatwork (Progress)
+        if: always()
+        env:
+          CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
+          CHATWORK_ROOM_ID: ${{ secrets.CHATWORK_ROOM_ID }}
+        run: |
+          # 進捗状況を取得
+          STATS=$(python -c "
+          import json
+          try:
+              with open('output/analysis_results.json', 'r') as f:
+                  results = json.load(f)
+              successful = [r for r in results if not r.get('error')]
+              total_gain = sum(r.get('total_unrealized_gain_million_yen', 0) or 0 for r in successful)
+              print(f'{len(successful)}|{total_gain:.0f}')
+          except:
+              print('0|0')
+          ")
+
+          COUNT=$(echo $STATS | cut -d'|' -f1)
+          GAIN=$(echo $STATS | cut -d'|' -f2)
+
+          # メッセージ作成
+          MESSAGE="[info][title]🏢 不動産含み益解析 進捗報告[/title]解析完了: ${COUNT} / 500 社
+          含み益合計: ¥${GAIN}m
+
+          詳細: https://misonicomee-byte.github.io/real-estate-analyzer/[/info]"
+
+          # Chatworkに送信
+          curl -X POST "https://api.chatwork.com/v2/rooms/${CHATWORK_ROOM_ID}/messages" \
+            -H "X-ChatWorkToken: ${CHATWORK_API_TOKEN}" \
+            -d "body=${MESSAGE}"
+
+      - name: Notify Chatwork (Complete)
+        if: steps.analysis.outputs.IS_COMPLETE == 'true'
+        env:
+          CHATWORK_API_TOKEN: ${{ secrets.CHATWORK_API_TOKEN }}
+          CHATWORK_ROOM_ID: ${{ secrets.CHATWORK_ROOM_ID }}
+        run: |
+          # 完了時の詳細メッセージ
+          STATS=$(python -c "
+          import json
+          with open('output/analysis_results.json', 'r') as f:
+              results = json.load(f)
+          successful = [r for r in results if not r.get('error') and r.get('total_unrealized_gain_million_yen')]
+          successful.sort(key=lambda x: x.get('total_unrealized_gain_million_yen', 0) or 0, reverse=True)
+
+          total_book = sum(r.get('total_book_value_million_yen', 0) or 0 for r in successful)
+          total_gain = sum(r.get('total_unrealized_gain_million_yen', 0) or 0 for r in successful)
+
+          top5 = '\\n'.join([f\"{i+1}. {r['company_name']}: +¥{r.get('total_unrealized_gain_million_yen', 0):,.0f}m\" for i, r in enumerate(successful[:5])])
+
+          print(f'{len(successful)}|{total_book:.0f}|{total_gain:.0f}|{top5}')
+          ")
+
+          MESSAGE="[info][title]🎉 TOPIX500 不動産含み益解析 完了！[/title]全500社の解析が完了しました！
+
+          📊 集計結果
+          ・簿価合計: ¥$(echo $STATS | cut -d'|' -f2)m
+          ・含み益合計: ¥$(echo $STATS | cut -d'|' -f3)m
+
+          🏆 含み益トップ5
+          $(echo $STATS | cut -d'|' -f4)
+
+          📍 詳細マップ: https://misonicomee-byte.github.io/real-estate-analyzer/[/info]"
+
+          curl -X POST "https://api.chatwork.com/v2/rooms/${CHATWORK_ROOM_ID}/messages" \
+            -H "X-ChatWorkToken: ${CHATWORK_API_TOKEN}" \
+            -d "body=${MESSAGE}"
