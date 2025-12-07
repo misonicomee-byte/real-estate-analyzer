@@ -1,0 +1,19 @@
+# Environment
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+
+# Cache
+cache/
+*.json
+
+# Output
+output/
+*.html
+
+# IDE
+.idea/
+.vscode/
+*.swp
