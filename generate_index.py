@@ -1,0 +1,264 @@
+#!/usr/bin/env python3
+"""
+GitHub Pages用のインデックスページを生成
+"""
+
+import json
+from pathlib import Path
+from datetime import datetime
+
+
+def generate_index(output_dir: str = "./output"):
+    """インデックスHTMLを生成"""
+    output_path = Path(output_dir)
+    results_file = output_path / "analysis_results.json"
+
+    # 結果を読み込み
+    results = []
+    if results_file.exists():
+        with open(results_file, "r", encoding="utf-8") as f:
+            results = json.load(f)
+
+    # 成功した結果のみ
+    successful = [r for r in results if not r.get("error") and r.get("total_unrealized_gain_million_yen")]
+
+    # 含み益順にソート
+    successful.sort(
+        key=lambda x: x.get("total_unrealized_gain_million_yen", 0) or 0,
+        reverse=True
+    )
+
+    # 集計
+    total_companies = len(successful)
+    total_book = sum(r.get("total_book_value_million_yen", 0) or 0 for r in successful)
+    total_estimated = sum(r.get("total_estimated_value_million_yen", 0) or 0 for r in successful)
+    total_gain = sum(r.get("total_unrealized_gain_million_yen", 0) or 0 for r in successful)
+
+    # 企業リストHTML
+    company_rows = ""
+    for i, r in enumerate(successful, 1):
+        gain = r.get("total_unrealized_gain_million_yen", 0) or 0
+        book = r.get("total_book_value_million_yen", 0) or 0
+        estimated = r.get("total_estimated_value_million_yen", 0) or 0
+        map_file = f"{r['stock_code']}_map.html"
+
+        gain_color = "#10B981" if gain > 0 else "#EF4444"
+
+        company_rows += f"""
+        <tr>
+            <td>{i}</td>
+            <td>
+                <a href="{map_file}" target="_blank">
+                    {r['company_name']}
+                </a>
+            </td>
+            <td>{r['stock_code']}</td>
+            <td class="number">¥{book:,.0f}m</td>
+            <td class="number">¥{estimated:,.0f}m</td>
+            <td class="number" style="color: {gain_color}; font-weight: bold;">
+                {'+' if gain > 0 else ''}¥{gain:,.0f}m
+            </td>
+            <td>
+                <a href="{map_file}" target="_blank" class="map-link">🗺️ 地図</a>
+            </td>
+        </tr>
+        """
+
+    # HTML生成
+    html = f"""<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOPIX500 不動産含み益解析</title>
+    <style>
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        body {{
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #F9FAFB;
+            color: #1F2937;
+            line-height: 1.6;
+        }}
+        .container {{
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }}
+        header {{
+            background: linear-gradient(135deg, #1E40AF 0%, #3B82F6 100%);
+            color: white;
+            padding: 40px 20px;
+            margin-bottom: 30px;
+        }}
+        header h1 {{
+            font-size: 28px;
+            margin-bottom: 10px;
+        }}
+        header p {{
+            opacity: 0.9;
+            font-size: 14px;
+        }}
+        .summary {{
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }}
+        .summary-card {{
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }}
+        .summary-card .label {{
+            font-size: 12px;
+            color: #6B7280;
+            margin-bottom: 5px;
+        }}
+        .summary-card .value {{
+            font-size: 24px;
+            font-weight: bold;
+        }}
+        .summary-card .value.gain {{
+            color: #10B981;
+        }}
+        table {{
+            width: 100%;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            border-collapse: collapse;
+            overflow: hidden;
+        }}
+        th, td {{
+            padding: 12px 16px;
+            text-align: left;
+            border-bottom: 1px solid #E5E7EB;
+        }}
+        th {{
+            background: #F3F4F6;
+            font-weight: 600;
+            font-size: 12px;
+            text-transform: uppercase;
+            color: #6B7280;
+        }}
+        tr:hover {{
+            background: #F9FAFB;
+        }}
+        .number {{
+            text-align: right;
+            font-family: 'SF Mono', Monaco, monospace;
+        }}
+        a {{
+            color: #3B82F6;
+            text-decoration: none;
+        }}
+        a:hover {{
+            text-decoration: underline;
+        }}
+        .map-link {{
+            display: inline-block;
+            padding: 4px 12px;
+            background: #EFF6FF;
+            border-radius: 6px;
+            font-size: 12px;
+        }}
+        .map-link:hover {{
+            background: #DBEAFE;
+            text-decoration: none;
+        }}
+        footer {{
+            text-align: center;
+            padding: 40px 20px;
+            color: #9CA3AF;
+            font-size: 12px;
+        }}
+        .progress {{
+            background: #E5E7EB;
+            border-radius: 10px;
+            height: 8px;
+            margin-top: 10px;
+            overflow: hidden;
+        }}
+        .progress-bar {{
+            background: #10B981;
+            height: 100%;
+            border-radius: 10px;
+        }}
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>🏢 TOPIX500 不動産含み益解析</h1>
+            <p>有価証券報告書の簿価 vs 公示地価・基準地価で含み益を推計</p>
+            <div class="progress">
+                <div class="progress-bar" style="width: {total_companies / 5}%;"></div>
+            </div>
+            <p style="margin-top: 5px;">{total_companies} / 500 社 解析完了</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="summary">
+            <div class="summary-card">
+                <div class="label">解析済み企業数</div>
+                <div class="value">{total_companies} 社</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">簿価合計</div>
+                <div class="value">¥{total_book:,.0f}m</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">時価推計合計</div>
+                <div class="value">¥{total_estimated:,.0f}m</div>
+            </div>
+            <div class="summary-card">
+                <div class="label">含み益合計</div>
+                <div class="value gain">+¥{total_gain:,.0f}m</div>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>企業名</th>
+                    <th>コード</th>
+                    <th class="number">簿価</th>
+                    <th class="number">時価推計</th>
+                    <th class="number">含み益</th>
+                    <th>詳細</th>
+                </tr>
+            </thead>
+            <tbody>
+                {company_rows}
+            </tbody>
+        </table>
+    </div>
+
+    <footer>
+        <p>データ出典: EDINET（有価証券報告書）、国土交通省（地価公示）</p>
+        <p>最終更新: {datetime.now().strftime('%Y-%m-%d %H:%M')} JST</p>
+        <p style="margin-top: 10px;">
+            <a href="https://github.com/misonicomee-byte/real-estate-analyzer">GitHub</a>
+        </p>
+    </footer>
+</body>
+</html>
+"""
+
+    # 保存
+    index_file = output_path / "index.html"
+    with open(index_file, "w", encoding="utf-8") as f:
+        f.write(html)
+
+    print(f"インデックスページを生成しました: {index_file}")
+
+
+if __name__ == "__main__":
+    generate_index()

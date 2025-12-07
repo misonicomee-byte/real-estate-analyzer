@@ -1,0 +1,70 @@
+name: Weekly Real Estate Analysis
+
+on:
+  schedule:
+    # 毎週日曜日 22:00 UTC = 月曜日 7:00 JST
+    - cron: '0 22 * * 0'
+  workflow_dispatch:  # 手動実行も可能
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Download previous results
+        continue-on-error: true
+        run: |
+          mkdir -p output cache
+          # 前回の結果があればダウンロード
+          if [ -f "output/analysis_results.json" ]; then
+            echo "Previous results exist"
+          fi
+
+      - name: Restore cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            cache/
+            output/analysis_results.json
+          key: analysis-cache-${{ github.run_number }}
+          restore-keys: |
+            analysis-cache-
+
+      - name: Run analysis (10 companies)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          EDINET_API_KEY: ${{ secrets.EDINET_API_KEY }}
+        run: |
+          python weekly_runner.py --batch-size 10
+
+      - name: Generate index page
+        run: |
+          python generate_index.py
+
+      - name: Save cache
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            cache/
+            output/analysis_results.json
+          key: analysis-cache-${{ github.run_number }}
+
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./output
+          keep_files: true
