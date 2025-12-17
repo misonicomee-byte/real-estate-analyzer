@@ -1,10 +1,10 @@
 name: Weekly Real Estate Analysis
 
 on:
-  schedule:
-    # 毎週日曜日 22:00 UTC = 月曜日 7:00 JST
-    - cron: '0 22 * * 0'
-  workflow_dispatch:  # 手動実行も可能
+  # schedule:
+  #   # 毎週日曜日 22:00 UTC = 月曜日 7:00 JST
+  #   - cron: '0 22 * * 0'
+  workflow_dispatch:  # 手動実行のみ有効
 
 permissions:
   contents: write
@@ -89,8 +89,9 @@ jobs:
               with open('output/analysis_results.json', 'r') as f:
                   results = json.load(f)
               successful = [r for r in results if not r.get('error')]
-              total_gain = sum(r.get('total_unrealized_gain_million_yen', 0) or 0 for r in successful)
-              print(f'{len(successful)}|{total_gain:.0f}')
+              total_gain_million = sum(r.get('total_unrealized_gain_million_yen', 0) or 0 for r in successful)
+              total_gain_oku = total_gain_million / 100  # 百万円 → 億円
+              print(f'{len(successful)}|{total_gain_oku:.2f}')
           except:
               print('0|0')
           ")
@@ -100,7 +101,7 @@ jobs:
 
           # メッセージ作成
           MESSAGE="[info][title]🏢 不動産含み益解析 進捗報告[/title]解析完了: ${COUNT} / 500 社
-          含み益合計: ¥${GAIN}m
+          含み益合計: ¥${GAIN}億円
 
           詳細: https://misonicomee-byte.github.io/real-estate-analyzer/[/info]"
 
@@ -123,19 +124,23 @@ jobs:
           successful = [r for r in results if not r.get('error') and r.get('total_unrealized_gain_million_yen')]
           successful.sort(key=lambda x: x.get('total_unrealized_gain_million_yen', 0) or 0, reverse=True)
 
-          total_book = sum(r.get('total_book_value_million_yen', 0) or 0 for r in successful)
-          total_gain = sum(r.get('total_unrealized_gain_million_yen', 0) or 0 for r in successful)
+          total_book_million = sum(r.get('total_book_value_million_yen', 0) or 0 for r in successful)
+          total_gain_million = sum(r.get('total_unrealized_gain_million_yen', 0) or 0 for r in successful)
 
-          top5 = '\\n'.join([f\"{i+1}. {r['company_name']}: +¥{r.get('total_unrealized_gain_million_yen', 0):,.0f}m\" for i, r in enumerate(successful[:5])])
+          # 百万円 → 億円に変換
+          total_book_oku = total_book_million / 100
+          total_gain_oku = total_gain_million / 100
 
-          print(f'{len(successful)}|{total_book:.0f}|{total_gain:.0f}|{top5}')
+          top5 = '\\n'.join([f\"{i+1}. {r['company_name']}: +¥{r.get('total_unrealized_gain_million_yen', 0)/100:,.2f}億円\" for i, r in enumerate(successful[:5])])
+
+          print(f'{len(successful)}|{total_book_oku:.2f}|{total_gain_oku:.2f}|{top5}')
           ")
 
           MESSAGE="[info][title]🎉 TOPIX500 不動産含み益解析 完了！[/title]全500社の解析が完了しました！
 
           📊 集計結果
-          ・簿価合計: ¥$(echo $STATS | cut -d'|' -f2)m
-          ・含み益合計: ¥$(echo $STATS | cut -d'|' -f3)m
+          ・簿価合計: ¥$(echo $STATS | cut -d'|' -f2)億円
+          ・含み益合計: ¥$(echo $STATS | cut -d'|' -f3)億円
 
           🏆 含み益トップ5
           $(echo $STATS | cut -d'|' -f4)

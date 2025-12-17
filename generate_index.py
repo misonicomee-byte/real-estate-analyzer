@@ -28,18 +28,29 @@ def generate_index(output_dir: str = "./output"):
         reverse=True
     )
 
-    # 集計
+    # 集計（百万円 → 億円に変換）
     total_companies = len(successful)
-    total_book = sum(r.get("total_book_value_million_yen", 0) or 0 for r in successful)
-    total_estimated = sum(r.get("total_estimated_value_million_yen", 0) or 0 for r in successful)
-    total_gain = sum(r.get("total_unrealized_gain_million_yen", 0) or 0 for r in successful)
+    total_book_million = sum(r.get("total_book_value_million_yen", 0) or 0 for r in successful)
+    total_estimated_million = sum(r.get("total_estimated_value_million_yen", 0) or 0 for r in successful)
+    total_gain_million = sum(r.get("total_unrealized_gain_million_yen", 0) or 0 for r in successful)
+
+    # 億円に変換
+    total_book = total_book_million / 100
+    total_estimated = total_estimated_million / 100
+    total_gain = total_gain_million / 100
 
     # 企業リストHTML
     company_rows = ""
     for i, r in enumerate(successful, 1):
-        gain = r.get("total_unrealized_gain_million_yen", 0) or 0
-        book = r.get("total_book_value_million_yen", 0) or 0
-        estimated = r.get("total_estimated_value_million_yen", 0) or 0
+        gain_million = r.get("total_unrealized_gain_million_yen", 0) or 0
+        book_million = r.get("total_book_value_million_yen", 0) or 0
+        estimated_million = r.get("total_estimated_value_million_yen", 0) or 0
+
+        # 億円に変換
+        gain = gain_million / 100
+        book = book_million / 100
+        estimated = estimated_million / 100
+
         map_file = f"{r['stock_code']}_map.html"
 
         gain_color = "#10B981" if gain > 0 else "#EF4444"
@@ -53,10 +64,10 @@ def generate_index(output_dir: str = "./output"):
                 </a>
             </td>
             <td>{r['stock_code']}</td>
-            <td class="number">¥{book:,.0f}m</td>
-            <td class="number">¥{estimated:,.0f}m</td>
+            <td class="number">¥{book:,.2f}億円</td>
+            <td class="number">¥{estimated:,.2f}億円</td>
             <td class="number" style="color: {gain_color}; font-weight: bold;">
-                {'+' if gain > 0 else ''}¥{gain:,.0f}m
+                {'+' if gain > 0 else ''}¥{gain:,.2f}億円
             </td>
             <td>
                 <a href="{map_file}" target="_blank" class="map-link">🗺️ 地図</a>
@@ -211,15 +222,15 @@ def generate_index(output_dir: str = "./output"):
             </div>
             <div class="summary-card">
                 <div class="label">簿価合計</div>
-                <div class="value">¥{total_book:,.0f}m</div>
+                <div class="value">¥{total_book:,.2f}億円</div>
             </div>
             <div class="summary-card">
                 <div class="label">時価推計合計</div>
-                <div class="value">¥{total_estimated:,.0f}m</div>
+                <div class="value">¥{total_estimated:,.2f}億円</div>
             </div>
             <div class="summary-card">
                 <div class="label">含み益合計</div>
-                <div class="value gain">+¥{total_gain:,.0f}m</div>
+                <div class="value gain">+¥{total_gain:,.2f}億円</div>
             </div>
         </div>
 
