@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_ac9b8a1c3651264c405c6e42ed5e41be {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+        <div style="
+            position: fixed;
+            top: 10px;
+            left: 60px;
+            z-index: 1000;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-family: 'Helvetica Neue', sans-serif;
+        ">
+            <h2 style="margin: 0 0 5px 0; font-size: 18px; color: #1F2937;">
+                キーエンス 不動産含み益解析
+            </h2>
+            <p style="margin: 0 0 10px 0; font-size: 12px; color: #6B7280;">
+                有価証券報告書 簿価 vs 公示地価・基準地価
+            </p>
+            <div style="display: flex; gap: 20px;">
+                <div>
+                    <div style="font-size: 11px; color: #6B7280;">保有土地簿価計</div>
+                    <div style="font-size: 16px; font-weight: bold;">¥6,869 百万円</div>
+                </div>
+                <div>
+                    <div style="font-size: 11px; color: #6B7280;">含み益合計</div>
+                    <div style="font-size: 16px; font-weight: bold; color: #10B981;">
+                        +¥16,259 百万円
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    
+        <div style="
+            position: fixed;
+            bottom: 30px;
+            right: 10px;
+            z-index: 1000;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-family: 'Helvetica Neue', sans-serif;
+            font-size: 12px;
+        ">
+            <div style="font-weight: bold; margin-bottom: 8px;">凡例 (Ownership)</div>
+            <div style="display: flex; align-items: center; margin-bottom: 4px;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #10B981; border-radius: 50%; margin-right: 8px;"></span>
+                自社保有 (Owned)
+            </div>
+            <div style="display: flex; align-items: center;">
+                <span style="display: inline-block; width: 12px; height: 12px; background: #9CA3AF; border-radius: 50%; margin-right: 8px;"></span>
+                賃貸 (Leased)
+            </div>
+        </div>
+        
+    
+        <div id="sidebar" style="
+            position: fixed;
+            top: 10px;
+            left: 10px;
+            width: 280px;
+            max-height: calc(100vh - 20px);
+            z-index: 999;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            font-family: 'Helvetica Neue', sans-serif;
+            display: none;
+        ">
+            <div style="
+                padding: 15px;
+                border-bottom: 1px solid #E5E7EB;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+            ">
+                <span style="font-weight: bold;">物件一覧</span>
+                <button onclick="document.getElementById('sidebar').style.display='none'" style="
+                    background: none;
+                    border: none;
+                    font-size: 18px;
+                    cursor: pointer;
+                    color: #6B7280;
+                ">×</button>
+            </div>
+            <div style="overflow-y: auto; max-height: calc(100vh - 80px);">
+                
+            <div style="
+                padding: 12px;
+                border-bottom: 1px solid #E5E7EB;
+                cursor: pointer;
+            " onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+                <div style="font-weight: 500; margin-bottom: 4px;">その他（さいたま市）</div>
+                <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+                    埼玉県さいたま市...
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6B7280;">簿価: ¥4,611m</span>
+                    <span style="color: #10B981; font-weight: bold;">
+                        +¥16,259m
+                    </span>
+                </div>
+            </div>
+            
+            <div style="
+                padding: 12px;
+                border-bottom: 1px solid #E5E7EB;
+                cursor: pointer;
+            " onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+                <div style="font-weight: 500; margin-bottom: 4px;">本社</div>
+                <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+                    埼玉県川口市...
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6B7280;">簿価: ¥512m</span>
+                    <span style="color: #DC2626; font-weight: bold;">
+                        ¥0m
+                    </span>
+                </div>
+            </div>
+            
+            <div style="
+                padding: 12px;
+                border-bottom: 1px solid #E5E7EB;
+                cursor: pointer;
+            " onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+                <div style="font-weight: 500; margin-bottom: 4px;">鹿沼工場</div>
+                <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+                    栃木県鹿沼市...
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6B7280;">簿価: ¥844m</span>
+                    <span style="color: #DC2626; font-weight: bold;">
+                        ¥0m
+                    </span>
+                </div>
+            </div>
+            
+            <div style="
+                padding: 12px;
+                border-bottom: 1px solid #E5E7EB;
+                cursor: pointer;
+            " onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+                <div style="font-weight: 500; margin-bottom: 4px;">上青木事業所</div>
+                <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+                    埼玉県川口市...
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6B7280;">簿価: ¥362m</span>
+                    <span style="color: #DC2626; font-weight: bold;">
+                        ¥0m
+                    </span>
+                </div>
+            </div>
+            
+            <div style="
+                padding: 12px;
+                border-bottom: 1px solid #E5E7EB;
+                cursor: pointer;
+            " onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+                <div style="font-weight: 500; margin-bottom: 4px;">グローバル本社</div>
+                <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+                    東京都千代田区...
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6B7280;">簿価: ¥0m</span>
+                    <span style="color: #DC2626; font-weight: bold;">
+                        ¥0m
+                    </span>
+                </div>
+            </div>
+            
+            <div style="
+                padding: 12px;
+                border-bottom: 1px solid #E5E7EB;
+                cursor: pointer;
+            " onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+                <div style="font-weight: 500; margin-bottom: 4px;">QMS株式会社</div>
+                <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+                    埼玉県川口市...
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6B7280;">簿価: ¥235m</span>
+                    <span style="color: #DC2626; font-weight: bold;">
+                        ¥0m
+                    </span>
+                </div>
+            </div>
+            
+            <div style="
+                padding: 12px;
+                border-bottom: 1px solid #E5E7EB;
+                cursor: pointer;
+            " onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+                <div style="font-weight: 500; margin-bottom: 4px;">ENPLAS (U.S.A.),INC.</div>
+                <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+                    米国 ジョージア州...
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6B7280;">簿価: ¥201m</span>
+                    <span style="color: #DC2626; font-weight: bold;">
+                        ¥0m
+                    </span>
+                </div>
+            </div>
+            
+            <div style="
+                padding: 12px;
+                border-bottom: 1px solid #E5E7EB;
+                cursor: pointer;
+            " onmouseover="this.style.background='#F9FAFB'" onmouseout="this.style.background='white'">
+                <div style="font-weight: 500; margin-bottom: 4px;">ENPLAS AMERICA, INC.</div>
+                <div style="font-size: 11px; color: #6B7280; margin-bottom: 4px;">
+                    米国 ニューヨーク州...
+                </div>
+                <div style="display: flex; justify-content: space-between;">
+                    <span style="color: #6B7280;">簿価: ¥104m</span>
+                    <span style="color: #DC2626; font-weight: bold;">
+                        ¥0m
+                    </span>
+                </div>
+            </div>
+            
+            </div>
+        </div>
+
+        <button onclick="
+            var sb = document.getElementById('sidebar');
+            sb.style.display = sb.style.display === 'none' ? 'block' : 'none';
+        " style="
+            position: fixed;
+            top: 120px;
+            left: 60px;
+            z-index: 1000;
+            background: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 4px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            cursor: pointer;
+            font-family: 'Helvetica Neue', sans-serif;
+            font-size: 13px;
+        ">
+            📋 物件一覧
+        </button>
+        
+    
+            <div class="folium-map" id="map_ac9b8a1c3651264c405c6e42ed5e41be" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_ac9b8a1c3651264c405c6e42ed5e41be = L.map(
+                "map_ac9b8a1c3651264c405c6e42ed5e41be",
+                {
+                    center: [35.8078228, 139.7241054],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 10,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_d89a0fc84f34ed28160631021b3f11cc = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_d89a0fc84f34ed28160631021b3f11cc.addTo(map_ac9b8a1c3651264c405c6e42ed5e41be);
+        
+    
+            var circle_marker_fc204dbfa49b15ce8e2405cc3b9fb6e5 = L.circleMarker(
+                [35.8078228, 139.7241054],
+                {"bubblingMouseEvents": true, "color": "#6B7280", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#6B7280", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_ac9b8a1c3651264c405c6e42ed5e41be);
+        
+    
+        var popup_e48c00a21ae948e8d00a087a609c0baa = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_684b4ede5a318e916d96d6dffd1470e4 = $(`<div id="html_684b4ede5a318e916d96d6dffd1470e4" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Helvetica Neue', sans-serif; min-width: 250px;">             <h4 style="margin: 0 0 10px 0; color: #1F2937;">本社</h4>             <table style="width: 100%; border-collapse: collapse;">                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">所有形態</td>                     <td style="padding: 4px 0; text-align: right;">自社保有</td>                 </tr>                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">住所</td>                     <td style="padding: 4px 0; text-align: right; font-size: 12px;">埼玉県川口市</td>                 </tr>                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">土地面積</td>                     <td style="padding: 4px 0; text-align: right;">1,868 ㎡</td>                 </tr>                 <tr style="border-top: 1px solid #E5E7EB;">                     <td style="padding: 8px 0 4px 0; color: #6B7280;">帳簿価額</td>                     <td style="padding: 8px 0 4px 0; text-align: right;">¥512m</td>                 </tr>                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">時価推計</td>                     <td style="padding: 4px 0; text-align: right;">¥0m</td>                 </tr>                 <tr style="background: #FEE2E2;">                     <td style="padding: 4px 8px; font-weight: bold;">含み益</td>                     <td style="padding: 4px 8px; text-align: right; font-weight: bold; color: #DC2626;">                         ¥0m                     </td>                 </tr>             </table>             <p style="margin: 10px 0 0 0; font-size: 11px; color: #9CA3AF;">                 地価データ取得失敗             </p>         </div>         </div>`)[0];
+                popup_e48c00a21ae948e8d00a087a609c0baa.setContent(html_684b4ede5a318e916d96d6dffd1470e4);
+            
+        
+
+        circle_marker_fc204dbfa49b15ce8e2405cc3b9fb6e5.bindPopup(popup_e48c00a21ae948e8d00a087a609c0baa)
+        ;
+
+        
+    
+    
+            circle_marker_fc204dbfa49b15ce8e2405cc3b9fb6e5.bindTooltip(
+                `<div>
+                     本社 (+¥0m)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_040d402fd83289d8e119ca763ec4359a = L.circleMarker(
+                [35.8078228, 139.7241054],
+                {"bubblingMouseEvents": true, "color": "#6B7280", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#6B7280", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_ac9b8a1c3651264c405c6e42ed5e41be);
+        
+    
+        var popup_83b7b2d6a4c6022c0bf84835848f6975 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_fc3896c7994251cb668844ececbd2245 = $(`<div id="html_fc3896c7994251cb668844ececbd2245" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Helvetica Neue', sans-serif; min-width: 250px;">             <h4 style="margin: 0 0 10px 0; color: #1F2937;">上青木事業所</h4>             <table style="width: 100%; border-collapse: collapse;">                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">所有形態</td>                     <td style="padding: 4px 0; text-align: right;">自社保有</td>                 </tr>                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">住所</td>                     <td style="padding: 4px 0; text-align: right; font-size: 12px;">埼玉県川口市</td>                 </tr>                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">土地面積</td>                     <td style="padding: 4px 0; text-align: right;">1,077 ㎡</td>                 </tr>                 <tr style="border-top: 1px solid #E5E7EB;">                     <td style="padding: 8px 0 4px 0; color: #6B7280;">帳簿価額</td>                     <td style="padding: 8px 0 4px 0; text-align: right;">¥362m</td>                 </tr>                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">時価推計</td>                     <td style="padding: 4px 0; text-align: right;">¥0m</td>                 </tr>                 <tr style="background: #FEE2E2;">                     <td style="padding: 4px 8px; font-weight: bold;">含み益</td>                     <td style="padding: 4px 8px; text-align: right; font-weight: bold; color: #DC2626;">                         ¥0m                     </td>                 </tr>             </table>             <p style="margin: 10px 0 0 0; font-size: 11px; color: #9CA3AF;">                 地価データ取得失敗             </p>         </div>         </div>`)[0];
+                popup_83b7b2d6a4c6022c0bf84835848f6975.setContent(html_fc3896c7994251cb668844ececbd2245);
+            
+        
+
+        circle_marker_040d402fd83289d8e119ca763ec4359a.bindPopup(popup_83b7b2d6a4c6022c0bf84835848f6975)
+        ;
+
+        
+    
+    
+            circle_marker_040d402fd83289d8e119ca763ec4359a.bindTooltip(
+                `<div>
+                     上青木事業所 (+¥0m)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_69ddea035246b11343c865a6fad71c65 = L.circleMarker(
+                [35.8078228, 139.7241054],
+                {"bubblingMouseEvents": true, "color": "#6B7280", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#6B7280", "fillOpacity": 0.7, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 8, "stroke": true, "weight": 3}
+            ).addTo(map_ac9b8a1c3651264c405c6e42ed5e41be);
+        
+    
+        var popup_0322f01344e036f3414788ec73a862d9 = L.popup({
+  "maxWidth": 300,
+});
+
+        
+            
+                var html_93a69f2091f1ba42656bc2d39d30e1df = $(`<div id="html_93a69f2091f1ba42656bc2d39d30e1df" style="width: 100.0%; height: 100.0%;">         <div style="font-family: 'Helvetica Neue', sans-serif; min-width: 250px;">             <h4 style="margin: 0 0 10px 0; color: #1F2937;">QMS株式会社</h4>             <table style="width: 100%; border-collapse: collapse;">                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">所有形態</td>                     <td style="padding: 4px 0; text-align: right;">自社保有</td>                 </tr>                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">住所</td>                     <td style="padding: 4px 0; text-align: right; font-size: 12px;">埼玉県川口市</td>                 </tr>                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">土地面積</td>                     <td style="padding: 4px 0; text-align: right;">884 ㎡</td>                 </tr>                 <tr style="border-top: 1px solid #E5E7EB;">                     <td style="padding: 8px 0 4px 0; color: #6B7280;">帳簿価額</td>                     <td style="padding: 8px 0 4px 0; text-align: right;">¥235m</td>                 </tr>                 <tr>                     <td style="padding: 4px 0; color: #6B7280;">時価推計</td>                     <td style="padding: 4px 0; text-align: right;">¥0m</td>                 </tr>                 <tr style="background: #FEE2E2;">                     <td style="padding: 4px 8px; font-weight: bold;">含み益</td>                     <td style="padding: 4px 8px; text-align: right; font-weight: bold; color: #DC2626;">                         ¥0m                     </td>                 </tr>             </table>             <p style="margin: 10px 0 0 0; font-size: 11px; color: #9CA3AF;">                 地価データ取得失敗             </p>         </div>         </div>`)[0];
+                popup_0322f01344e036f3414788ec73a862d9.setContent(html_93a69f2091f1ba42656bc2d39d30e1df);
+            
+        
+
+        circle_marker_69ddea035246b11343c865a6fad71c65.bindPopup(popup_0322f01344e036f3414788ec73a862d9)
+        ;
+
+        
+    
+    
+            circle_marker_69ddea035246b11343c865a6fad71c65.bindTooltip(
+                `<div>
+                     QMS株式会社 (+¥0m)
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+</script>
+</html>
