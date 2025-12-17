@@ -80,6 +80,11 @@ class EDINETClient:
         """
         指定企業の有価証券報告書を検索
 
+        効率化された検索：
+        1. 直近6ヶ月を優先
+        2. 決算発表時期（5-6月）を重点的に検索
+        3. キャッシュを活用
+
         Args:
             edinet_code: EDINETコード (例: "E02144")
             fiscal_year: 事業年度。Noneの場合は直近
@@ -90,16 +95,46 @@ class EDINETClient:
         if fiscal_year is None:
             fiscal_year = datetime.now().year - 1
 
-        # 過去1年分の日付を遡って検索
-        for days_ago in range(0, 365, 7):
+        # キャッシュファイルパス
+        cache_file = self.cache_dir / f"{edinet_code}_annual_report.json"
+
+        # キャッシュが30日以内なら使用
+        if cache_file.exists():
+            import json
+            cache_age = (datetime.now() - datetime.fromtimestamp(cache_file.stat().st_mtime)).days
+            if cache_age < 30:
+                try:
+                    with open(cache_file, 'r') as f:
+                        cached = json.load(f)
+                        print(f"キャッシュから取得: {edinet_code}")
+                        return cached
+                except:
+                    pass
+
+        # 優先検索期間（決算発表時期: 5-6月、11-12月）
+        priority_months = [5, 6, 11, 12]
+
+        # まず優先期間を検索（過去18ヶ月、14日間隔）
+        for days_ago in range(0, 540, 14):
             date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
+            month = int(date.split('-')[1])
+
+            # 優先月でない場合はスキップ（最初の6ヶ月は全て検索）
+            if days_ago > 180 and month not in priority_months:
+                continue
+
             docs = self.get_document_list(date=date)
 
             for doc in docs:
                 if doc.get("edinetCode") == edinet_code:
+                    # キャッシュに保存
+                    import json
+                    with open(cache_file, 'w') as f:
+                        json.dump(doc, f)
                     return doc
 
-            time.sleep(0.5)  # レート制限対策
+            # APIレート制限回避
+            time.sleep(0.5)
 
         return None
 
