@@ -114,8 +114,11 @@ class EDINETClient:
         # 優先検索期間（決算発表時期: 5-6月、11-12月）
         priority_months = [5, 6, 11, 12]
 
-        # まず優先期間を検索（過去18ヶ月、14日間隔）
-        for days_ago in range(0, 540, 14):
+        # まず優先期間を検索（過去2年、3日間隔で検索）
+        # - 最初の6ヶ月: 全ての日を検索（3日間隔）
+        # - 6ヶ月〜2年: 優先月のみ検索（5,6,11,12月、3日間隔）
+        # 3日間隔なら約66%の確率で提出日にヒットする
+        for days_ago in range(0, 730, 3):
             date = (datetime.now() - timedelta(days=days_ago)).strftime("%Y-%m-%d")
             month = int(date.split('-')[1])
 
@@ -133,8 +136,8 @@ class EDINETClient:
                         json.dump(doc, f)
                     return doc
 
-            # APIレート制限回避
-            time.sleep(0.5)
+            # APIレート制限回避（3日間隔なので短めに）
+            time.sleep(0.2)
 
         return None
 
